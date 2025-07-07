@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Cube Challenge</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #111827;
+            color: #f3f4f6;
+        }
+        .canvas-container {
+            position: relative;
+            width: 100%;
+            padding-top: 100%;
+            border-radius: 0.75rem;
+            background-color: #1f2937;
+            cursor: grab;
+        }
+        canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            border-radius: 0.75rem;
+        }
+        .choice-container {
+            transition: border-color 0.2s ease-in-out;
+        }
+        .choice-container.selected {
+            border-color: #3b82f6; /* Blue 500 */
+            box-shadow: 0 0 10px #3b82f6;
+        }
+        .choice-container.correct {
+            border-color: #4ade80; /* Green 400 */
+            box-shadow: 0 0 15px #4ade80;
+        }
+        .choice-container.incorrect {
+            border-color: #f87171; /* Red 400 */
+        }
+        .choice-label {
+            position: absolute;
+            top: 8px;
+            left: 12px;
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: white;
+            text-shadow: 0 0 5px black;
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body class="flex items-center justify-center min-h-screen">
+
+    <div id="app-container" class="w-full max-w-7xl mx-auto p-4 md:p-8">
+
+        <!-- Instructions View -->
+        <div id="instructions-view" class="text-center">
+            <h1 class="text-4xl md:text-5xl font-bold text-white mb-4">3D Cube Completion Challenge</h1>
+            <p class="text-lg text-gray-300 max-w-3xl mx-auto mb-6">
+                This is a timed test consisting of 5 problems. Select your answer and click "Submit".
+                Your speed and accuracy will be recorded.
+            </p>
+            <button id="start-game-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-8 rounded-lg text-xl transition-transform transform hover:scale-105">
+                Start Test
+            </button>
+        </div>
+
+        <!-- Game View -->
+        <div id="game-view" class="hidden">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-2xl md:text-3xl font-bold">Problem <span id="problem-number">1</span> of <span id="total-problems">5</span></h2>
+                <div class="text-xl md:text-2xl font-bold bg-gray-800 px-4 py-2 rounded-lg">Problem Time: <span id="problem-timer">0s</span></div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-8 mb-8">
+                <div class="text-center"><h3 class="text-xl font-semibold mb-2">Given Part 1</h3><div class="canvas-container" id="given1-container"></div></div>
+                <div class="text-center"><h3 class="text-xl font-semibold mb-2">Given Part 2</h3><div class="canvas-container" id="given2-container"></div></div>
+            </div>
+
+            <div>
+                <h3 class="text-xl font-semibold mb-4 text-center">Select the correct missing part:</h3>
+                <!-- FIX: Improved responsive grid for tablets -->
+                <div id="choices-grid" class="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6"></div>
+            </div>
+            
+            <div id="controls-container" class="text-center mt-8 h-24">
+                 <p id="feedback-text" class="text-2xl font-bold h-8 mb-2"></p>
+                 <button id="submit-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-8 rounded-lg text-xl disabled:bg-gray-500 disabled:cursor-not-allowed">
+                    Submit Answer
+                </button>
+                 <button id="next-problem-btn" class="hidden bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-8 rounded-lg text-xl">
+                    Next Problem
+                </button>
+                 <button id="finish-game-btn" class="hidden bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-8 rounded-lg text-xl">
+                    Show Results
+                </button>
+            </div>
+        </div>
+
+        <!-- Results View -->
+        <div id="results-view" class="hidden text-center">
+            <h1 class="text-4xl md:text-5xl font-bold text-white mb-4">Test Complete!</h1>
+            <div class="bg-gray-800 rounded-lg p-6 max-w-2xl mx-auto">
+                <div class="grid grid-cols-2 gap-4 text-2xl mb-6">
+                    <div><strong>Final Score:</strong> <span id="final-score"></span></div>
+                    <div><strong>Total Time:</strong> <span id="total-time"></span></div>
+                </div>
+                <h3 class="text-2xl font-bold mb-4">Time per Problem:</h3>
+                <table class="w-full text-left">
+                    <thead>
+                        <tr class="border-b border-gray-600">
+                            <th class="p-2">Problem</th>
+                            <th class="p-2">Time Taken</th>
+                            <th class="p-2">Result</th>
+                        </tr>
+                    </thead>
+                    <tbody id="results-table-body">
+                        <!-- Results will be injected here -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </div>
+
+    <script type="module">
+        // --- CONSTANTS AND CONFIG ---
+        const TOTAL_PROBLEMS = 5;
+        const blueColor = 0x4A90E2;
+        const grayColor = 0x888888;
+        const renderers = [];
+
+        // --- DOM ELEMENTS ---
+        const instructionsView = document.getElementById('instructions-view');
+        const gameView = document.getElementById('game-view');
+        const resultsView = document.getElementById('results-view');
+        const given1Container = document.getElementById('given1-container');
+        const given2Container = document.getElementById('given2-container');
+        const choicesGrid = document.getElementById('choices-grid');
+        const feedbackText = document.getElementById('feedback-text');
+        const submitBtn = document.getElementById('submit-btn');
+        const nextProblemBtn = document.getElementById('next-problem-btn');
+        const finishGameBtn = document.getElementById('finish-game-btn');
+        
+        // --- GAME STATE ---
+        let sceneGiven1, sceneGiven2;
+        const choiceScenes = [];
+        let currentProblemData = {};
+        let score = 0;
+        let problemNumber = 1;
+        let problemActive = true;
+        let selectedChoiceIndex = null;
+        let problemStartTime, totalStartTime;
+        let problemTimerInterval;
+        const resultsData = [];
+
+        // --- 3D RENDERING LOGIC ---
+        function create3DScene(container) {
+            const scene = new THREE.Scene();
+            const camera = new THREE.PerspectiveCamera(50, 1, 0.1, 1000);
+            const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+            renderer.setSize(container.clientWidth, container.clientWidth);
+            renderer.setPixelRatio(window.devicePixelRatio);
+            container.appendChild(renderer.domElement);
+            renderers.push({renderer, container, camera, scene});
+            camera.position.set(4, 4, 4);
+            camera.lookAt(0, 0, 0);
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
+            scene.add(ambientLight);
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+            directionalLight.position.set(5, 10, 7.5);
+            scene.add(directionalLight);
+            const group = new THREE.Group();
+            scene.add(group);
+            let isDragging = false, isTap = true, previousMousePosition = { x: 0, y: 0 };
+            
+            const onDragStart = (x, y) => {
+                isDragging = true;
+                isTap = true; // Assume it's a tap until proven otherwise by movement
+                previousMousePosition = { x, y };
+            };
+            const onDragMove = (x, y) => {
+                if (!isDragging) return;
+                const deltaX = Math.abs(x - previousMousePosition.x);
+                const deltaY = Math.abs(y - previousMousePosition.y);
+                // If finger moves more than a few pixels, it's a drag, not a tap
+                if (deltaX > 5 || deltaY > 5) {
+                    isTap = false; 
+                }
+                
+                const delta = { x: x - previousMousePosition.x, y: y - previousMousePosition.y };
+                group.rotateOnWorldAxis(new THREE.Vector3(0, 1, 0), delta.x * 0.007);
+                group.rotateOnWorldAxis(new THREE.Vector3(1, 0, 0), delta.y * 0.007);
+                previousMousePosition = { x, y };
+            };
+            const onDragEnd = (e) => {
+                isDragging = false;
+                // FIX: If it was a tap (no drag), manually trigger click on parent for selection
+                if(isTap && e.target.closest('.choice-container')) {
+                    e.target.closest('.choice-container').click();
+                }
+            };
+            
+            container.addEventListener('mousedown', e => onDragStart(e.clientX, e.clientY));
+            container.addEventListener('mousemove', e => onDragMove(e.clientX, e.clientY));
+            container.addEventListener('mouseup', onDragEnd);
+            container.addEventListener('mouseleave', () => { isDragging = false; });
+            
+            container.addEventListener('touchstart', e => onDragStart(e.touches[0].clientX, e.touches[0].clientY), { passive: true });
+            container.addEventListener('touchmove', e => {
+                // Only prevent default if dragging, to allow page scroll otherwise
+                if (isDragging) e.preventDefault();
+                onDragMove(e.touches[0].clientX, e.touches[0].clientY);
+            }, { passive: false });
+            container.addEventListener('touchend', onDragEnd);
+
+            return { scene, camera, renderer, group };
+        }
+        function createCubeFaces(x, y, z, size = 0.9) {
+            const s = size, isOuterFace = [z === 0, z === 2, y === 2, y === 0, x === 0, x === 2];
+            const materials = [
+                new THREE.MeshLambertMaterial({ color: isOuterFace[5] ? blueColor : grayColor }), new THREE.MeshLambertMaterial({ color: isOuterFace[4] ? blueColor : grayColor }),
+                new THREE.MeshLambertMaterial({ color: isOuterFace[1] ? blueColor : grayColor }), new THREE.MeshLambertMaterial({ color: isOuterFace[0] ? blueColor : grayColor }),
+                new THREE.MeshLambertMaterial({ color: isOuterFace[2] ? blueColor : grayColor }), new THREE.MeshLambertMaterial({ color: isOuterFace[3] ? blueColor : grayColor })
+            ];
+            const cube = new THREE.Mesh(new THREE.BoxGeometry(s, s, s), materials);
+            const wireframe = new THREE.LineSegments(new THREE.EdgesGeometry(cube.geometry), new THREE.LineBasicMaterial({ color: 0x111827, linewidth: 2 }));
+            cube.position.set(x, z, y); wireframe.position.copy(cube.position);
+            return { cube, wireframe };
+        }
+        function renderBlocks(sceneInfo, blocks) {
+            const { group } = sceneInfo;
+            while (group.children.length) group.remove(group.children[0]);
+            group.position.set(0, 0, 0); group.rotation.set(0, 0, 0);
+            blocks.forEach(([x, y, z]) => {
+                const { cube, wireframe } = createCubeFaces(x, y, z);
+                group.add(cube); group.add(wireframe);
+            });
+            const centerOffset = new THREE.Vector3();
+            new THREE.Box3().setFromObject(group).getCenter(centerOffset);
+            group.position.sub(centerOffset);
+            group.rotation.set((Math.random() - 0.5) * Math.PI, (Math.random() - 0.5) * Math.PI, 0);
+        }
+        function animate() {
+            requestAnimationFrame(animate);
+            renderers.forEach(({renderer, scene, camera}) => renderer.render(scene, camera));
+        }
+        window.addEventListener('resize', () => {
+             renderers.forEach(({renderer, container, camera}) => {
+                const size = container.clientWidth;
+                camera.aspect = 1; camera.updateProjectionMatrix(); renderer.setSize(size, size);
+            });
+        });
+
+        // --- GAME LOGIC ---
+        function generate3x3x3Cube() { return Array.from({ length: 27 }, (_, i) => [i % 3, Math.floor(i / 9), Math.floor(i / 3) % 3]); }
+        function shuffleArray(array) { for (let i = array.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [array[i], array[j]] = [array[j], array[i]]; } }
+        function areArraysEqual(a, b) { const s1 = new Set(a.map(JSON.stringify)); const s2 = new Set(b.map(JSON.stringify)); return s1.size === s2.size && [...s1].every(v => s2.has(v)); }
+        function splitCubeIntoParts(p) { shuffleArray(p); return { part1: p.slice(0, 9), part2: p.slice(9, 18), part3: p.slice(18) }; }
+        function generateDistractors(correct, all) {
+            const distractors = [];
+            while (distractors.length < 3) {
+                shuffleArray(all);
+                const d = all.slice(0, 9);
+                if (!areArraysEqual(d, correct) && !distractors.some(ex => areArraysEqual(ex, d))) distractors.push(d);
+            }
+            return distractors;
+        }
+
+        function selectChoice(index, element) {
+            if (!problemActive) return;
+            if (selectedChoiceIndex !== null) {
+                choicesGrid.children[selectedChoiceIndex].classList.remove('selected');
+            }
+            selectedChoiceIndex = index;
+            element.classList.add('selected');
+            submitBtn.disabled = false;
+        }
+
+        function startTimers() {
+            problemStartTime = new Date();
+            const timerEl = document.getElementById('problem-timer');
+            timerEl.textContent = `0s`; // Reset visually
+            problemTimerInterval = setInterval(() => {
+                const seconds = Math.floor((new Date() - problemStartTime) / 1000);
+                timerEl.textContent = `${seconds}s`;
+            }, 1000);
+        }
+
+        function stopTimers() {
+            clearInterval(problemTimerInterval);
+        }
+
+        function newProblem() {
+            if (!sceneGiven1) {
+                sceneGiven1 = create3DScene(given1Container);
+                sceneGiven2 = create3DScene(given2Container);
+            }
+            problemActive = true;
+            selectedChoiceIndex = null;
+            const allPositions = generate3x3x3Cube();
+            const { part1, part2, part3 } = splitCubeIntoParts(allPositions);
+            const choices = [part3, ...generateDistractors(part3, allPositions)];
+            shuffleArray(choices);
+            currentProblemData = {
+                part1, part2, choices,
+                correctIndex: choices.findIndex(c => areArraysEqual(c, part3))
+            };
+            renderBlocks(sceneGiven1, part1);
+            renderBlocks(sceneGiven2, part2);
+            choicesGrid.innerHTML = '';
+            choiceScenes.length = 0;
+            const choiceLabels = ['A', 'B', 'C', 'D'];
+            choices.forEach((blocks, i) => {
+                const container = document.createElement('div');
+                container.className = 'choice-container relative border-2 border-gray-600 rounded-xl cursor-pointer';
+                container.innerHTML = `<div class="canvas-container"></div><div class="choice-label">${choiceLabels[i]}</div>`;
+                choicesGrid.appendChild(container);
+                const sceneInfo = create3DScene(container.querySelector('.canvas-container'));
+                choiceScenes.push(sceneInfo);
+                renderBlocks(sceneInfo, blocks);
+                container.addEventListener('click', () => selectChoice(i, container));
+            });
+            document.getElementById('problem-number').textContent = problemNumber;
+            feedbackText.textContent = '';
+            submitBtn.style.display = 'inline-block';
+            submitBtn.disabled = true;
+            nextProblemBtn.style.display = 'none';
+            finishGameBtn.style.display = 'none';
+            startTimers();
+        }
+
+        function submitAnswer() {
+            if (selectedChoiceIndex === null) return;
+            problemActive = false;
+            stopTimers();
+            const timeTaken = (new Date() - problemStartTime) / 1000;
+            const isCorrect = selectedChoiceIndex === currentProblemData.correctIndex;
+
+            if (isCorrect) {
+                score++;
+                feedbackText.textContent = "Correct!";
+                feedbackText.className = 'text-2xl font-bold h-8 mb-2 text-green-400';
+            } else {
+                feedbackText.textContent = "Incorrect.";
+                feedbackText.className = 'text-2xl font-bold h-8 mb-2 text-red-400';
+                choicesGrid.children[selectedChoiceIndex].classList.add('incorrect');
+            }
+            choicesGrid.children[currentProblemData.correctIndex].classList.add('correct');
+            
+            resultsData.push({ problem: problemNumber, time: timeTaken.toFixed(1), correct: isCorrect });
+
+            submitBtn.style.display = 'none';
+            if (problemNumber < TOTAL_PROBLEMS) {
+                nextProblemBtn.style.display = 'inline-block';
+            } else {
+                finishGameBtn.style.display = 'inline-block';
+            }
+        }
+
+        function showResults() {
+            const totalTime = (new Date() - totalStartTime) / 1000;
+            gameView.style.display = 'none';
+            resultsView.style.display = 'block';
+            document.getElementById('final-score').textContent = `${score} / ${TOTAL_PROBLEMS}`;
+            document.getElementById('total-time').textContent = `${totalTime.toFixed(1)}s`;
+            const tableBody = document.getElementById('results-table-body');
+            tableBody.innerHTML = '';
+            resultsData.forEach(res => {
+                const row = document.createElement('tr');
+                row.className = 'border-b border-gray-700';
+                row.innerHTML = `
+                    <td class="p-2">${res.problem}</td>
+                    <td class="p-2">${res.time}s</td>
+                    <td class="p-2 ${res.correct ? 'text-green-400' : 'text-red-400'}">${res.correct ? 'Correct' : 'Incorrect'}</td>
+                `;
+                tableBody.appendChild(row);
+            });
+        }
+
+        // --- EVENT LISTENERS ---
+        document.getElementById('start-game-btn').addEventListener('click', () => {
+            instructionsView.style.display = 'none';
+            gameView.style.display = 'block';
+            document.getElementById('total-problems').textContent = TOTAL_PROBLEMS;
+            totalStartTime = new Date();
+            newProblem();
+        });
+        submitBtn.addEventListener('click', submitAnswer);
+        nextProblemBtn.addEventListener('click', () => {
+            problemNumber++;
+            newProblem();
+        });
+        finishGameBtn.addEventListener('click', showResults);
+
+        // --- INITIALIZATION ---
+        animate();
+    </script>
+</body>
+</html>
