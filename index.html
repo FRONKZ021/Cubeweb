@@ -59,7 +59,7 @@
 </head>
 <body class="flex items-center justify-center min-h-screen">
 
-    <div id="app-container" class="w-full max-w-7xl mx-auto p-4 md:p-8">
+    <div id="app-container" class="w-full max-w-7xl mx-auto p-4 md:p-6">
 
         <!-- Instructions View -->
         <div id="instructions-view" class="text-center">
@@ -75,32 +75,32 @@
 
         <!-- Game View -->
         <div id="game-view" class="hidden">
-            <div class="flex justify-between items-center mb-6">
-                <h2 class="text-2xl md:text-3xl font-bold">Problem <span id="problem-number">1</span> of <span id="total-problems">5</span></h2>
-                <div class="text-xl md:text-2xl font-bold bg-gray-800 px-4 py-2 rounded-lg">Problem Time: <span id="problem-timer">0s</span></div>
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-lg md:text-3xl font-bold">Problem <span id="problem-number">1</span> of <span id="total-problems">5</span></h2>
+                <div class="text-base md:text-2xl font-bold bg-gray-800 px-3 py-2 rounded-lg">Time: <span id="problem-timer">0s</span></div>
             </div>
 
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-8 mb-8">
-                <div class="text-center"><h3 class="text-xl font-semibold mb-2">Given Part 1</h3><div class="canvas-container" id="given1-container"></div></div>
-                <div class="text-center"><h3 class="text-xl font-semibold mb-2">Given Part 2</h3><div class="canvas-container" id="given2-container"></div></div>
+            <!-- FIX: Changed grid to be 2-column on all sizes to fit mobile screens -->
+            <div class="grid grid-cols-2 gap-4 mb-4">
+                <div class="text-center"><h3 class="text-base md:text-xl font-semibold mb-2">Given Part 1</h3><div class="canvas-container" id="given1-container"></div></div>
+                <div class="text-center"><h3 class="text-base md:text-xl font-semibold mb-2">Given Part 2</h3><div class="canvas-container" id="given2-container"></div></div>
             </div>
 
             <div>
-                <h3 class="text-xl font-semibold mb-4 text-center">Select the correct missing part:</h3>
-                <!-- FIX: Improved responsive grid for tablets -->
-                <div id="choices-grid" class="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6"></div>
+                <h3 class="text-lg md:text-xl font-semibold mb-3 text-center">Select the correct missing part:</h3>
+                <div id="choices-grid" class="grid grid-cols-2 gap-4"></div>
             </div>
             
-            <div id="controls-container" class="text-center mt-8 h-24">
-                 <p id="feedback-text" class="text-2xl font-bold h-8 mb-2"></p>
-                 <button id="submit-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-8 rounded-lg text-xl disabled:bg-gray-500 disabled:cursor-not-allowed">
-                    Submit Answer
+            <div id="controls-container" class="text-center mt-6 h-24">
+                 <p id="feedback-text" class="text-xl md:text-2xl font-bold h-8 mb-2"></p>
+                 <button id="submit-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 md:px-8 rounded-lg text-lg md:text-xl disabled:bg-gray-500 disabled:cursor-not-allowed">
+                    Submit
                 </button>
-                 <button id="next-problem-btn" class="hidden bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-8 rounded-lg text-xl">
-                    Next Problem
+                 <button id="next-problem-btn" class="hidden bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 md:px-8 rounded-lg text-lg md:text-xl">
+                    Next
                 </button>
-                 <button id="finish-game-btn" class="hidden bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-8 rounded-lg text-xl">
-                    Show Results
+                 <button id="finish-game-btn" class="hidden bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-6 md:px-8 rounded-lg text-lg md:text-xl">
+                    Results
                 </button>
             </div>
         </div>
@@ -109,7 +109,7 @@
         <div id="results-view" class="hidden text-center">
             <h1 class="text-4xl md:text-5xl font-bold text-white mb-4">Test Complete!</h1>
             <div class="bg-gray-800 rounded-lg p-6 max-w-2xl mx-auto">
-                <div class="grid grid-cols-2 gap-4 text-2xl mb-6">
+                <div class="grid grid-cols-2 gap-4 text-xl md:text-2xl mb-6">
                     <div><strong>Final Score:</strong> <span id="final-score"></span></div>
                     <div><strong>Total Time:</strong> <span id="total-time"></span></div>
                 </div>
@@ -184,14 +184,13 @@
             
             const onDragStart = (x, y) => {
                 isDragging = true;
-                isTap = true; // Assume it's a tap until proven otherwise by movement
+                isTap = true;
                 previousMousePosition = { x, y };
             };
             const onDragMove = (x, y) => {
                 if (!isDragging) return;
                 const deltaX = Math.abs(x - previousMousePosition.x);
                 const deltaY = Math.abs(y - previousMousePosition.y);
-                // If finger moves more than a few pixels, it's a drag, not a tap
                 if (deltaX > 5 || deltaY > 5) {
                     isTap = false; 
                 }
@@ -203,7 +202,6 @@
             };
             const onDragEnd = (e) => {
                 isDragging = false;
-                // FIX: If it was a tap (no drag), manually trigger click on parent for selection
                 if(isTap && e.target.closest('.choice-container')) {
                     e.target.closest('.choice-container').click();
                 }
@@ -216,7 +214,6 @@
             
             container.addEventListener('touchstart', e => onDragStart(e.touches[0].clientX, e.touches[0].clientY), { passive: true });
             container.addEventListener('touchmove', e => {
-                // Only prevent default if dragging, to allow page scroll otherwise
                 if (isDragging) e.preventDefault();
                 onDragMove(e.touches[0].clientX, e.touches[0].clientY);
             }, { passive: false });
@@ -348,10 +345,10 @@
             if (isCorrect) {
                 score++;
                 feedbackText.textContent = "Correct!";
-                feedbackText.className = 'text-2xl font-bold h-8 mb-2 text-green-400';
+                feedbackText.className = 'text-xl md:text-2xl font-bold h-8 mb-2 text-green-400';
             } else {
                 feedbackText.textContent = "Incorrect.";
-                feedbackText.className = 'text-2xl font-bold h-8 mb-2 text-red-400';
+                feedbackText.className = 'text-xl md:text-2xl font-bold h-8 mb-2 text-red-400';
                 choicesGrid.children[selectedChoiceIndex].classList.add('incorrect');
             }
             choicesGrid.children[currentProblemData.correctIndex].classList.add('correct');
