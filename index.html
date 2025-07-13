@@ -242,8 +242,8 @@
             }
             
             const cube = new THREE.Mesh(new THREE.BoxGeometry(size, size, size), cubeMaterial);
-            // FIX: Set linewidth to 1 for maximum sharpness and consistency.
-            const wireframe = new THREE.LineSegments(new THREE.EdgesGeometry(cube.geometry), new THREE.LineBasicMaterial({ color: 0x000000, linewidth: 1 }));
+            // FIX: Set linewidth to 2 for thicker, more visible lines.
+            const wireframe = new THREE.LineSegments(new THREE.EdgesGeometry(cube.geometry), new THREE.LineBasicMaterial({ color: 0x000000, linewidth: 3 }));
             
             const cubeGroup = new THREE.Group();
             cubeGroup.add(cube);
