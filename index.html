@@ -265,7 +265,6 @@
             }
             
             const cube = new THREE.Mesh(new THREE.BoxGeometry(size, size, size), cubeMaterial);
-            // FIX: Set linewidth to 2 for thicker, more visible lines.
             const wireframe = new THREE.LineSegments(new THREE.EdgesGeometry(cube.geometry), new THREE.LineBasicMaterial({ color: 0x000000, linewidth: 3 }));
             
             const cubeGroup = new THREE.Group();
@@ -327,17 +326,51 @@
 
         function generate3x3x3Cube() { return Array.from({ length: 27 }, (_, i) => [i % 3, Math.floor(i / 9), Math.floor(i / 3) % 3]); }
         function shuffleArray(array) { for (let i = array.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [array[i], array[j]] = [array[j], array[i]]; } }
-        function areArraysEqual(a, b) { const s1 = new Set(a.map(JSON.stringify)); const s2 = new Set(b.map(JSON.stringify)); return s1.size === s2.size && [...s1].every(v => s2.has(v)); }
+        function areArraysEqual(a, b) { 
+            if (a.length !== b.length) return false;
+            const s1 = new Set(a.map(JSON.stringify)); 
+            const s2 = new Set(b.map(JSON.stringify)); 
+            return s1.size === s2.size && [...s1].every(v => s2.has(v)); 
+        }
         function splitCubeIntoParts(p) { shuffleArray(p); return { part1: p.slice(0, 9), part2: p.slice(9, 18), part3: p.slice(18) }; }
-        function generateDistractors(correct, all) {
+        
+        /**
+         * MODIFIED: Creates distractors that are very similar to the correct answer.
+         * It does this by taking the correct shape and swapping 1 or 2 blocks
+         * with blocks from the other parts of the cube.
+         */
+        function generateDistractors(correctPart, givenParts) {
             const distractors = [];
+            const otherBlocks = givenParts.filter(block => !correctPart.some(correctBlock => areArraysEqual([block], [correctBlock])));
+            
             while (distractors.length < 3) {
-                shuffleArray(all);
-                const d = all.slice(0, 9);
-                if (!areArraysEqual(d, correct) && !distractors.some(ex => areArraysEqual(ex, d))) distractors.push(d);
+                let distractor = [...correctPart];
+                
+                // Determine how many blocks to swap (1 or 2) for variety
+                const swaps = Math.random() < 0.7 ? 1 : 2; 
+
+                for (let i = 0; i < swaps; i++) {
+                    if (otherBlocks.length > 0 && distractor.length > 0) {
+                         // Pick a random block from the correct part to remove
+                        const blockToRemoveIndex = Math.floor(Math.random() * distractor.length);
+                        const removedBlock = distractor.splice(blockToRemoveIndex, 1)[0];
+
+                        // Pick a random block from the *other* parts to add
+                        const blockToAddIndex = Math.floor(Math.random() * otherBlocks.length);
+                        const addedBlock = otherBlocks[blockToAddIndex];
+
+                        distractor.push(addedBlock);
+                    }
+                }
+
+                // Ensure the generated distractor is unique and not the same as the correct answer
+                if (!areArraysEqual(distractor, correctPart) && !distractors.some(d => areArraysEqual(d, distractor))) {
+                    distractors.push(distractor);
+                }
             }
             return distractors;
         }
+
 
         function selectChoice(index, element) {
             if (!problemActive) return;
@@ -368,8 +401,11 @@
             problemActive = true;
             selectedChoiceIndex = null;
             const allPositions = generate3x3x3Cube();
-            const { part1, part2, part3 } = splitCubeIntoParts(allPositions);
-            currentProblemData = { choices: [part3, ...generateDistractors(part3, allPositions)] };
+            const { part1, part2, part3 } = splitCubeIntoParts([...allPositions]);
+            
+            // Pass the unused blocks (part1 and part2) to the distractor generator
+            currentProblemData = { choices: [part3, ...generateDistractors(part3, [...part1, ...part2])] };
+            
             shuffleArray(currentProblemData.choices);
             currentProblemData.correctIndex = currentProblemData.choices.findIndex(c => areArraysEqual(c, part3));
             
