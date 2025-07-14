@@ -62,27 +62,37 @@
                 <button id="logout-btn" class="text-sm text-gray-500 hover:text-blue-600">Logout</button>
             </div>
             <h1 class="text-4xl md:text-5xl font-bold text-gray-900 mb-4">3D Cube Completion Challenge</h1>
-            <p class="text-lg text-gray-600 max-w-3xl mx-auto mb-8">
-                Combine the first two parts to form a complete 3x3x3 cube. Select the missing third part from the choices below.
-            </p>
             
-            <div id="mode-selection" class="mb-8">
-                <h2 class="text-2xl font-bold mb-4">Choose a Game Mode</h2>
+            <!-- Resume Prompt -->
+            <div id="resume-prompt" class="hidden my-8 p-4 bg-yellow-100 border border-yellow-300 rounded-lg max-w-md mx-auto">
+                <p class="font-bold text-lg mb-2">You have a game in progress!</p>
                 <div class="flex justify-center gap-4">
-                    <button id="mode-static" class="mode-button border-2 border-gray-300 bg-white hover:border-blue-500 rounded-lg p-4 w-40">
-                        <span class="text-xl font-bold">Static</span>
-                        <p class="text-sm text-gray-500">Cubes are upright.</p>
-                    </button>
-                    <button id="mode-rotated" class="mode-button border-2 border-gray-300 bg-white hover:border-blue-500 rounded-lg p-4 w-40">
-                        <span class="text-xl font-bold">Rotated</span>
-                        <p class="text-sm text-gray-500">Cubes are randomly rotated.</p>
-                    </button>
+                    <button id="resume-game-btn" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-6 rounded-lg">Resume Game</button>
+                    <button id="start-new-game-btn" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-6 rounded-lg">Start New</button>
                 </div>
             </div>
 
-            <button id="start-game-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-8 rounded-lg text-xl transition-transform transform hover:scale-105 disabled:bg-gray-400 disabled:cursor-not-allowed" disabled>
-                Start
-            </button>
+            <div id="new-game-setup">
+                <p class="text-lg text-gray-600 max-w-3xl mx-auto mb-8">
+                    Combine the first two parts to form a complete 3x3x3 cube. Select the missing third part from the choices below.
+                </p>
+                <div id="mode-selection" class="mb-8">
+                    <h2 class="text-2xl font-bold mb-4">Choose a Game Mode</h2>
+                    <div class="flex justify-center gap-4">
+                        <button id="mode-static" class="mode-button border-2 border-gray-300 bg-white hover:border-blue-500 rounded-lg p-4 w-40">
+                            <span class="text-xl font-bold">Static</span>
+                            <p class="text-sm text-gray-500">Cubes are upright.</p>
+                        </button>
+                        <button id="mode-rotated" class="mode-button border-2 border-gray-300 bg-white hover:border-blue-500 rounded-lg p-4 w-40">
+                            <span class="text-xl font-bold">Rotated</span>
+                            <p class="text-sm text-gray-500">Cubes are randomly rotated.</p>
+                        </button>
+                    </div>
+                </div>
+                <button id="start-game-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-8 rounded-lg text-xl transition-transform transform hover:scale-105 disabled:bg-gray-400 disabled:cursor-not-allowed" disabled>
+                    Start
+                </button>
+            </div>
             <button id="view-history-btn" class="bg-gray-500 hover:bg-gray-600 text-white font-bold py-3 px-8 rounded-lg text-xl mt-4">View History</button>
         </div>
 
@@ -179,6 +189,10 @@
         const problemTimerDisplay = document.getElementById('problem-timer');
         const viewHistoryBtn = document.getElementById('view-history-btn');
         const backToInstructionsBtn = document.getElementById('back-to-instructions-btn');
+        const resumePrompt = document.getElementById('resume-prompt');
+        const newGameSetup = document.getElementById('new-game-setup');
+        const resumeGameBtn = document.getElementById('resume-game-btn');
+        const startNewGameBtn = document.getElementById('start-new-game-btn');
         
         // --- GAME STATE ---
         let currentUser = null;
@@ -193,7 +207,7 @@
         let selectedChoiceIndex = null;
         let problemStartTime, totalStartTime;
         let problemTimerInterval;
-        const resultsData = [];
+        let resultsData = [];
 
         // --- 3D RENDERING LOGIC ---
         function create3DScene(container) {
@@ -252,37 +266,21 @@
             const cubeGroup = new THREE.Group();
             cubeGroup.add(cube);
 
-            // --- THICK LINES FIX ---
-            // Create edges using thin boxes instead of lines for consistent thickness.
-            const edgeThickness = 0.04; // Adjust this value for thicker/thinner lines
+            const edgeThickness = 0.04;
             const edgeMaterial = new THREE.MeshBasicMaterial({ color: 0x000000 });
-            
-            // The 12 edges of a cube
             const edgesData = [
-                // 4 edges along the Y-axis (vertical)
-                { size: [edgeThickness, size, edgeThickness], position: [size/2, 0, size/2] },
-                { size: [edgeThickness, size, edgeThickness], position: [-size/2, 0, size/2] },
-                { size: [edgeThickness, size, edgeThickness], position: [size/2, 0, -size/2] },
-                { size: [edgeThickness, size, edgeThickness], position: [-size/2, 0, -size/2] },
-                // 4 edges along the X-axis
-                { size: [size, edgeThickness, edgeThickness], position: [0, size/2, size/2] },
-                { size: [size, edgeThickness, edgeThickness], position: [0, -size/2, size/2] },
-                { size: [size, edgeThickness, edgeThickness], position: [0, size/2, -size/2] },
-                { size: [size, edgeThickness, edgeThickness], position: [0, -size/2, -size/2] },
-                // 4 edges along the Z-axis
-                { size: [edgeThickness, edgeThickness, size], position: [size/2, size/2, 0] },
-                { size: [edgeThickness, edgeThickness, size], position: [-size/2, size/2, 0] },
-                { size: [edgeThickness, edgeThickness, size], position: [size/2, -size/2, 0] },
-                { size: [edgeThickness, edgeThickness, size], position: [-size/2, -size/2, 0] },
+                { size: [edgeThickness, size, edgeThickness], position: [size/2, 0, size/2] }, { size: [edgeThickness, size, edgeThickness], position: [-size/2, 0, size/2] },
+                { size: [edgeThickness, size, edgeThickness], position: [size/2, 0, -size/2] }, { size: [edgeThickness, size, edgeThickness], position: [-size/2, 0, -size/2] },
+                { size: [size, edgeThickness, edgeThickness], position: [0, size/2, size/2] }, { size: [size, edgeThickness, edgeThickness], position: [0, -size/2, size/2] },
+                { size: [size, edgeThickness, edgeThickness], position: [0, size/2, -size/2] }, { size: [size, edgeThickness, edgeThickness], position: [0, -size/2, -size/2] },
+                { size: [edgeThickness, edgeThickness, size], position: [size/2, size/2, 0] }, { size: [edgeThickness, edgeThickness, size], position: [-size/2, size/2, 0] },
+                { size: [edgeThickness, edgeThickness, size], position: [size/2, -size/2, 0] }, { size: [edgeThickness, edgeThickness, size], position: [-size/2, -size/2, 0] },
             ];
-
             edgesData.forEach(data => {
-                const edgeGeometry = new THREE.BoxGeometry(...data.size);
-                const edge = new THREE.Mesh(edgeGeometry, edgeMaterial);
+                const edge = new THREE.Mesh(new THREE.BoxGeometry(...data.size), edgeMaterial);
                 edge.position.set(...data.position);
                 cubeGroup.add(edge);
             });
-
             return cubeGroup;
         }
 
@@ -323,11 +321,24 @@
             });
         });
 
-        // --- GAME LOGIC ---
+        // --- GAME LOGIC & STATE MANAGEMENT ---
         function formatTime(seconds) {
             const minutes = Math.floor(seconds / 60);
             const remainingSeconds = (seconds % 60).toFixed(2);
             return `${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(5, '0')}`;
+        }
+
+        function saveGameState() {
+            if (!currentUser) return;
+            const state = {
+                score, problemNumber, resultsData, totalStartTime, gameMode, currentProblemData
+            };
+            localStorage.setItem(`inProgressGame_${currentUser}`, JSON.stringify(state));
+        }
+
+        function clearGameState() {
+            if (!currentUser) return;
+            localStorage.removeItem(`inProgressGame_${currentUser}`);
         }
 
         function generate3x3x3Cube() { return Array.from({ length: 27 }, (_, i) => [i % 3, Math.floor(i / 9), Math.floor(i / 3) % 3]); }
@@ -348,7 +359,7 @@
                 const swaps = Math.random() < 0.7 ? 1 : 2; 
                 for (let i = 0; i < swaps; i++) {
                     if (otherBlocks.length > 0 && distractor.length > 0) {
-                        const removedBlock = distractor.splice(Math.floor(Math.random() * distractor.length), 1)[0];
+                        distractor.splice(Math.floor(Math.random() * distractor.length), 1)[0];
                         distractor.push(otherBlocks[Math.floor(Math.random() * otherBlocks.length)]);
                     }
                 }
@@ -380,26 +391,22 @@
             clearInterval(problemTimerInterval);
         }
 
-        function newProblem() {
+        function renderProblem(problemData) {
             if (!sceneGiven1) {
                 sceneGiven1 = create3DScene(given1Container);
                 sceneGiven2 = create3DScene(given2Container);
             }
             problemActive = true;
             selectedChoiceIndex = null;
-            const allPositions = generate3x3x3Cube();
-            const { part1, part2, part3 } = splitCubeIntoParts([...allPositions]);
-            currentProblemData = { choices: [part3, ...generateDistractors(part3, [...part1, ...part2])] };
-            shuffleArray(currentProblemData.choices);
-            currentProblemData.correctIndex = currentProblemData.choices.findIndex(c => areArraysEqual(c, part3));
             
+            const { part1, part2, choices } = problemData;
             renderBlocks(sceneGiven1, part1, 'part1');
             renderBlocks(sceneGiven2, part2, 'part2');
 
             choicesGrid.innerHTML = '';
             choiceScenes.length = 0;
             const choiceLabels = ['A', 'B', 'C', 'D'];
-            currentProblemData.choices.forEach((blocks, i) => {
+            choices.forEach((blocks, i) => {
                 const choiceWrapper = document.createElement('div');
                 choiceWrapper.className = 'text-center';
                 const container = document.createElement('div');
@@ -426,6 +433,18 @@
             startTimers();
         }
 
+        function newProblem() {
+            const allPositions = generate3x3x3Cube();
+            const { part1, part2, part3 } = splitCubeIntoParts([...allPositions]);
+            const choices = [part3, ...generateDistractors(part3, [...part1, ...part2])];
+            shuffleArray(choices);
+            const correctIndex = choices.findIndex(c => areArraysEqual(c, part3));
+            
+            currentProblemData = { part1, part2, choices, correctIndex };
+            saveGameState();
+            renderProblem(currentProblemData);
+        }
+
         function submitAnswer() {
             if (selectedChoiceIndex === null) return;
             problemActive = false;
@@ -449,6 +468,7 @@
             } else {
                 finishGameBtn.style.display = 'inline-block';
             }
+            saveGameState(); // Save state after answering
         }
 
         function showResults() {
@@ -469,15 +489,17 @@
             if (!userHistory[currentUser]) userHistory[currentUser] = [];
             userHistory[currentUser].push({ date: new Date().toLocaleString(), score, totalTime: totalTime.toFixed(2), results: resultsData });
             saveUserHistory();
+            clearGameState(); // Clear in-progress game when finished
         }
 
         function restartGame() {
             stopTimers();
+            clearGameState(); // Clear in-progress game on restart
             gameView.style.display = 'none';
             resultsView.style.display = 'none';
             historyView.style.display = 'none';
             instructionsView.style.display = 'block';
-            score = 0; problemNumber = 1; resultsData.length = 0;
+            score = 0; problemNumber = 1; resultsData = [];
             selectedChoiceIndex = null;
             problemActive = false;
             gameMode = null;
@@ -500,6 +522,15 @@
             loginView.style.display = 'none';
             instructionsView.style.display = 'block';
             loadUserHistory();
+
+            const savedGame = localStorage.getItem(`inProgressGame_${currentUser}`);
+            if (savedGame) {
+                resumePrompt.classList.remove('hidden');
+                newGameSetup.classList.add('hidden');
+            } else {
+                resumePrompt.classList.add('hidden');
+                newGameSetup.classList.remove('hidden');
+            }
         }
 
         function logout() {
@@ -549,13 +580,39 @@
         logoutBtn.addEventListener('click', logout);
         modeStaticBtn.addEventListener('click', () => selectMode('static'));
         modeRotatedBtn.addEventListener('click', () => selectMode('rotated'));
+        
         startGameBtn.addEventListener('click', () => {
             if (!gameMode) return;
+            clearGameState();
             instructionsView.style.display = 'none';
             gameView.style.display = 'block';
+            score = 0; problemNumber = 1; resultsData = [];
             totalStartTime = new Date();
             newProblem();
         });
+
+        resumeGameBtn.addEventListener('click', () => {
+            const savedGame = JSON.parse(localStorage.getItem(`inProgressGame_${currentUser}`));
+            if (savedGame) {
+                score = savedGame.score;
+                problemNumber = savedGame.problemNumber;
+                resultsData = savedGame.resultsData;
+                totalStartTime = savedGame.totalStartTime;
+                gameMode = savedGame.gameMode;
+                currentProblemData = savedGame.currentProblemData;
+                
+                instructionsView.style.display = 'none';
+                gameView.style.display = 'block';
+                renderProblem(currentProblemData);
+            }
+        });
+
+        startNewGameBtn.addEventListener('click', () => {
+            clearGameState();
+            resumePrompt.classList.add('hidden');
+            newGameSetup.classList.remove('hidden');
+        });
+
         submitBtn.addEventListener('click', submitAnswer);
         nextProblemBtn.addEventListener('click', () => { problemNumber++; newProblem(); });
         finishGameBtn.addEventListener('click', showResults);
