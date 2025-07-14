@@ -249,7 +249,7 @@
                 case 'choice': cubeMaterial = new THREE.MeshLambertMaterial({ color: greenColor }); break;
             }
             const cube = new THREE.Mesh(new THREE.BoxGeometry(size, size, size), cubeMaterial);
-            const wireframe = new THREE.LineSegments(new THREE.EdgesGeometry(cube.geometry), new THREE.LineBasicMaterial({ color: 0x000000, linewidth: 5 }));
+            const wireframe = new THREE.LineSegments(new THREE.EdgesGeometry(cube.geometry), new THREE.LineBasicMaterial({ color: 0x000000, linewidth: 10 }));
             const cubeGroup = new THREE.Group();
             cubeGroup.add(cube);
             cubeGroup.add(wireframe);
