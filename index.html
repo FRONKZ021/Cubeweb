@@ -249,10 +249,40 @@
                 case 'choice': cubeMaterial = new THREE.MeshLambertMaterial({ color: greenColor }); break;
             }
             const cube = new THREE.Mesh(new THREE.BoxGeometry(size, size, size), cubeMaterial);
-            const wireframe = new THREE.LineSegments(new THREE.EdgesGeometry(cube.geometry), new THREE.LineBasicMaterial({ color: 0x000000, linewidth: 10 }));
             const cubeGroup = new THREE.Group();
             cubeGroup.add(cube);
-            cubeGroup.add(wireframe);
+
+            // --- THICK LINES FIX ---
+            // Create edges using thin boxes instead of lines for consistent thickness.
+            const edgeThickness = 0.04; // Adjust this value for thicker/thinner lines
+            const edgeMaterial = new THREE.MeshBasicMaterial({ color: 0x000000 });
+            
+            // The 12 edges of a cube
+            const edgesData = [
+                // 4 edges along the Y-axis (vertical)
+                { size: [edgeThickness, size, edgeThickness], position: [size/2, 0, size/2] },
+                { size: [edgeThickness, size, edgeThickness], position: [-size/2, 0, size/2] },
+                { size: [edgeThickness, size, edgeThickness], position: [size/2, 0, -size/2] },
+                { size: [edgeThickness, size, edgeThickness], position: [-size/2, 0, -size/2] },
+                // 4 edges along the X-axis
+                { size: [size, edgeThickness, edgeThickness], position: [0, size/2, size/2] },
+                { size: [size, edgeThickness, edgeThickness], position: [0, -size/2, size/2] },
+                { size: [size, edgeThickness, edgeThickness], position: [0, size/2, -size/2] },
+                { size: [size, edgeThickness, edgeThickness], position: [0, -size/2, -size/2] },
+                // 4 edges along the Z-axis
+                { size: [edgeThickness, edgeThickness, size], position: [size/2, size/2, 0] },
+                { size: [edgeThickness, edgeThickness, size], position: [-size/2, size/2, 0] },
+                { size: [edgeThickness, edgeThickness, size], position: [size/2, -size/2, 0] },
+                { size: [edgeThickness, edgeThickness, size], position: [-size/2, -size/2, 0] },
+            ];
+
+            edgesData.forEach(data => {
+                const edgeGeometry = new THREE.BoxGeometry(...data.size);
+                const edge = new THREE.Mesh(edgeGeometry, edgeMaterial);
+                edge.position.set(...data.position);
+                cubeGroup.add(edge);
+            });
+
             return cubeGroup;
         }
 
